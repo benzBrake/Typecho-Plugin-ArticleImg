@@ -3,9 +3,9 @@ if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 /**
  * 文章顶部图片插件
  *
- * @package ArticleImg
+ * @package ArticleImg mod by <a href="http://blog.iplayloli.com/">Ryan</a>
  * @author BangZ
- * @version 1.0.0
+ * @version 1.0.1
  * @link http://bangz.me
  */
 class ArticleImg_Plugin implements Typecho_Plugin_Interface
@@ -19,12 +19,15 @@ class ArticleImg_Plugin implements Typecho_Plugin_Interface
      */
     public static function activate()
     {
-        $info = ArticleImg_Plugin::sqlInstall();
+        $info = self::sqlInstall();
         Typecho_Plugin::factory('admin/write-post.php')->option = array(__CLASS__, 'setThumbnail');
         Typecho_Plugin::factory('admin/write-page.php')->option = array(__CLASS__, 'setThumbnail');
         Typecho_Plugin::factory('Widget_Contents_Post_Edit')->finishPublish = array(__CLASS__, "changeURL");
         Typecho_Plugin::factory('Widget_Contents_Page_Edit')->finishPublish = array(__CLASS__, "changeURL");
         Typecho_Plugin::factory('Widget_Archive')->select = array(__CLASS__, 'selectHandle');
+        Typecho_Plugin::factory('Widget_Archive')->___getThumb = array(__CLASS__, 'render');
+        Typecho_Plugin::factory('admin/write-post.php')->bottom = array(__CLASS__, 'addFooter');
+        Typecho_Plugin::factory('admin/write-page.php')->bottom = array(__CLASS__, 'addFooter');
         return _t($info);
     }
 
@@ -55,7 +58,7 @@ class ArticleImg_Plugin implements Typecho_Plugin_Interface
      * @throws Typecho_Plugin_Exception
      */
     public static function deactivate(){
-      $delFields = Typecho_Widget::widget('Widget_Options')->plugin('ArticleImg')->delFields;
+      $delFields = Typecho_Widget::widget('Widget_Options')->plugin(str_replace("_Plugin","",__CLASS__))->delFields;
       if($delFields){
           $db = Typecho_Db::get();
           $prefix = $db->getPrefix();
@@ -72,7 +75,7 @@ class ArticleImg_Plugin implements Typecho_Plugin_Interface
      */
     public static function config(Typecho_Widget_Helper_Form $form)
     {
-      $defaultUrl = new Typecho_Widget_Helper_Form_Element_Text('defaultUrl', NULL, _t('http://static.bangz.me/thumb/default.png'), _t('默认文章图片URL'), _t('在这里输入默认的图片URL'));
+      $defaultUrl = new Typecho_Widget_Helper_Form_Element_Text('defaultUrl', NULL, _t('https://ooo.0o0.ooo/2017/02/13/58a165406ce28.png'), _t('默认文章图片URL'), _t('在这里输入默认的图片URL'));
       $form->addInput($defaultUrl);
       $delFields = new Typecho_Widget_Helper_Form_Element_Radio('delFields', array(0=>_t('保留数据'),1=>_t('删除数据'),), '0', _t('卸载设置'),_t('卸载插件后数据是否保留'));
       $form->addInput($delFields);
@@ -132,28 +135,25 @@ class ArticleImg_Plugin implements Typecho_Plugin_Interface
      */
     public static function changeURL($contents, $post)
     {
-      $defaultUrl = Typecho_Widget::widget('Widget_Options')->plugin('ArticleImg')->defaultUrl;
+      $defaultUrl = Typecho_Widget::widget('Widget_Options')->plugin(str_replace("_Plugin","",__CLASS__))->defaultUrl;
       $thumburl = $post->request->get('thumbnail-url', _t($defaultUrl));
   		$db = Typecho_Db::get();
       $sql = $db->update('table.contents')->rows(array('thumb' => $thumburl))->where('cid = ?', $post->cid);
   		$db->query($sql);
     }
-
     /**
-     * 前台输出url
+     * 增加调用方法
      *
      * @access public
      * @return void
      */
-    public static function render($url)
-    {
-        if ("unknown" == $url) {
-          _e(Typecho_Widget::widget('Widget_Options')->plugin('ArticleImg')->defaultUrl);
-        } else {
-          _e($url);
+    public static function render($archive) {
+        $thumb = $archive->thumb;
+        if ($thumb == 'unknown') {
+            $thumb = Typecho_Widget::widget('Widget_Options')->plugin(str_replace("_Plugin","",__CLASS__))->defaultUrl;
         }
+        return $thumb;
     }
-
     /**
      * 把增加的字段添加到查询中，以便在模版中直接调用
      *
@@ -184,4 +184,41 @@ class ArticleImg_Plugin implements Typecho_Plugin_Interface
       $select->cleanAttribute('fields');
       return $select;
     }
+    /**
+     * 附加JS和CSS
+     *
+     * @access public
+     * @return void
+     */
+    public static function addFooter() { ?>
+<style>
+span.set-thumb {
+	color: #467B96;
+	cursor: pointer;
+}
+span.set-thumb:hover {
+	text-decoration:underline
+}
+</style>
+<script>
+	$(document).ready(function() {
+		link = '<span class="set-thumb">设置为题图</span>'
+		$('#file-list').hover(function() {
+			list = $('li',$('#file-list'));
+			for(i=0;i<list.length;i++) {
+				infoPanel = $('.info', list[i]);
+				if ($('.set-thumb',infoPanel).length == 0) {
+					infoPanel.append(link);
+					$('.set-thumb',infoPanel).click(function() {
+						$('#thumbnail-url').val($(this).parent().parent().attr('data-url'));
+						$('a[href="#tab-advance"]').trigger('click');
+						
+					});
+				}
+			}
+		});
+	});
+</script>
+<?php
+	}
 }
