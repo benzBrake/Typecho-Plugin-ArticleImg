@@ -8,9 +8,10 @@
 ## Usage
 `$this`是`Widget_Archive`对象
 ```
-<?php $this->getThumb(); ?>
+<?php $this->thumb; ?>
 ```
-
+## Installation
+把整个repo下载到typecho查检目录并且改名文件夹为ArticleImg,然后在后台启用即可
 ## Thanks
 [istobran/Typecho-Plugin-ArticleImg][1]
 
