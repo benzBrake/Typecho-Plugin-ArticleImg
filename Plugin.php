@@ -5,7 +5,7 @@ if (!defined('__TYPECHO_ROOT_DIR__')) exit;
  *
  * @package ArticleImg mod by <a href="http://blog.iplayloli.com/">Ryan</a>
  * @author BangZ
- * @version 1.0.1
+ * @version 1.0.2
  * @link http://bangz.me
  */
 class ArticleImg_Plugin implements Typecho_Plugin_Interface
@@ -148,8 +148,16 @@ class ArticleImg_Plugin implements Typecho_Plugin_Interface
 	 * @return void
 	 */
 	public static function render($value, $archive) {
+		if (!(isset($value['thumb']))) return $value;
 		if ($value['thumb'] === "unknown") {
 			$value['thumb'] = Typecho_Widget::widget('Widget_Options')->plugin(str_replace("_Plugin","",__CLASS__))->defaultUrl;
+			if (empty($value['thumb'])) {
+				preg_match_all( "/<[img|IMG].*?src=[\'|\"](.*?)[\'|\"].*?[\/]?>/", $archive->content, $matches );
+				if(isset($matches[1][0])){
+					$value['thumb'] = $matches[1][0];
+				}
+			}
+			if (empty($value['thumb'])) $value['thumb'] = Typecho_Widget::widget('Widget_Options')->siteUrl . str_replace("/usr/","usr/",__TYPECHO_PLUGIN_DIR__). '/ArticleImg/rand/' . mt_rand(0, 9) . '.jpg';
 		}
 		return $value;
 	}
